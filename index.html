@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>JJ Overlay</title>
+    <style>
+        /* Basic dark mode styling to mimic a native iOS layout */
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            background-color: #121212; 
+            color: #ffffff; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            height: 100vh; 
+            margin: 0; 
+        }
+        h2 { margin-bottom: 30px; }
+        input { 
+            padding: 12px; 
+            width: 80%; 
+            max-width: 320px; 
+            border-radius: 10px; 
+            border: none; 
+            margin-bottom: 20px; 
+            font-size: 16px; 
+            text-align: center; 
+            background-color: #2c2c2e;
+            color: white;
+        }
+        input:focus { outline: 2px solid #0a84ff; }
+        button { 
+            padding: 15px 30px; 
+            background-color: #0a84ff; 
+            color: white; 
+            border: none; 
+            border-radius: 12px; 
+            font-size: 18px; 
+            font-weight: 600; 
+            cursor: pointer; 
+            width: 80%; 
+            max-width: 320px; 
+            box-shadow: 0 4px 14px rgba(10, 132, 255, 0.3);
+        }
+        button:active { transform: scale(0.98); }
+        #status { 
+            margin-top: 30px; 
+            font-size: 16px; 
+            color: #98989d; 
+            text-align: center;
+            padding: 0 20px;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+<body>
+    <h2>Agent Interface</h2>
+    
+    <input type="text" id="tunnel-url" placeholder="Paste trycloudflare.com URL" autocomplete="off" autocorrect="off" autocapitalize="off"/>
+    
+    <button onclick="pingBackend()">Ping Backend</button>
+    <p id="status">Ready for connection test.</p>
+
+    <script>
+        async function pingBackend() {
+            const statusText = document.getElementById('status');
+            let url = document.getElementById('tunnel-url').value.trim();
+            
+            if (!url) {
+                statusText.innerText = "Error: Paste the tunnel URL first.";
+                statusText.style.color = "#ff453a"; // iOS Red
+                return;
+            }
+
+            // Clean up the URL in case there is a trailing slash
+            if (url.endsWith('/')) {
+                url = url.slice(0, -1);
+            }
+            
+            // Append the specific route we will build in Python
+            const pingUrl = url + '/ping';
+
+            statusText.innerText = "Pinging server...";
+            statusText.style.color = "#98989d";
+
+            try {
+                // The actual network request
+                const response = await fetch(pingUrl);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                // Display success
+                statusText.innerText = "Success: " + JSON.stringify(data);
+                statusText.style.color = "#32d74b"; // iOS Green
+                
+            } catch (error) {
+                console.error(error);
+                statusText.innerText = "Failed: Backend unreachable or CORS blocked.";
+                statusText.style.color = "#ff453a"; 
+            }
+        }
+    </script>
+</body>
+</html>
