@@ -59,52 +59,64 @@
 </head>
 <body>
     <h2>Agent Interface</h2>
-    
-    <input type="text" id="tunnel-url" placeholder="Paste trycloudflare.com URL" autocomplete="off" autocorrect="off" autocapitalize="off"/>
-    
-    <button onclick="pingBackend()">Ping Backend</button>
+
+    <input type="password" id="token-input" placeholder="Enter access token" autocomplete="off"/>
+    <button onclick="saveToken()">Save Token</button>
+
+    <button onclick="pingBackend()" style="margin-top: 10px;">Ping Backend</button>
     <p id="status">Ready for connection test.</p>
 
     <script>
+        const BACKEND_URL = "https://pc-api.boomin.net"; // Subdomain
+
+        // Load saved token on page load
+        window.onload = () => {
+            const saved = localStorage.getItem("access_token");
+            if (saved) document.getElementById("token-input").value = saved;
+        };
+
+        function saveToken() {
+            const token = document.getElementById("token-input").value.trim();
+            if (token) {
+                localStorage.setItem("access_token", token);
+                document.getElementById("status").innerText = "Token saved locally.";
+                document.getElementById("status").style.color = "#32d74b";
+            }
+        }
+
         async function pingBackend() {
-            const statusText = document.getElementById('status');
-            let url = document.getElementById('tunnel-url').value.trim();
-            
-            if (!url) {
-                statusText.innerText = "Error: Paste the tunnel URL first.";
-                statusText.style.color = "#ff453a"; // iOS Red
+            const statusText = document.getElementById("status");
+            const token = localStorage.getItem("access_token");
+
+            if (!token) {
+                statusText.innerText = "Error: Save a token first.";
+                statusText.style.color = "#ff453a";
                 return;
             }
 
-            // Clean up the URL in case there is a trailing slash
-            if (url.endsWith('/')) {
-                url = url.slice(0, -1);
-            }
-            
-            // Append the specific route we will build in Python
-            const pingUrl = url + '/ping';
-
-            statusText.innerText = "Pinging server...";
+            statusText.innerText = "Pinging...";
             statusText.style.color = "#98989d";
 
             try {
-                // The actual network request
-                const response = await fetch(pingUrl);
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                const response = await fetch(`${BACKEND_URL}/ping`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+
+                if (response.status === 401) {
+                    statusText.innerText = "Error: Invalid token.";
+                    statusText.style.color = "#ff453a";
+                    return;
                 }
-                
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
                 const data = await response.json();
-                
-                // Display success
-                statusText.innerText = "Success: " + JSON.stringify(data);
-                statusText.style.color = "#32d74b"; // iOS Green
-                
+                statusText.innerText = `✓ ${data.message}`;
+                statusText.style.color = "#32d74b";
+
             } catch (error) {
-                console.error(error);
-                statusText.innerText = "Failed: Backend unreachable or CORS blocked.";
-                statusText.style.color = "#ff453a"; 
+                statusText.innerText = "Failed: Backend unreachable.";
+                statusText.style.color = "#ff453a";
             }
         }
     </script>
